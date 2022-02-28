@@ -12,6 +12,67 @@ let TORNContractAddresses = {'0.1ETH': address_01,
                             '1ETH': address_1, 
                             '10ETH': address_10, 
                             '100ETH': address_100};
+                            let treeArr = []
+//Credit: https://github.com/HaysS/javascript-cs-fundamentals/blob/e1a0ebf9b97369f4cc3ac7e0c98c0bd3fd6890db/data-structures/tree.js
+function Node(data) {
+    this.data = data;
+    this.children = [];
+}
+
+class Tree {
+    constructor() {
+        this.root = null;
+    }
+
+    add(data, toNodeData) {
+        const node = new Node(data);
+        // If the toNodeData arg is passed, find it. Otherwise, store null.
+        const parent = toNodeData ? this.findBFS(toNodeData) : null;
+
+        // Push new node to parent whose value matches toNodeData
+        if(parent) {
+            parent.children.push(node)
+        } else {
+            // If there's no parent, make this the root node
+            if(!this.root)
+                this.root = node;
+            else
+                return "Tried to store node as root when root already exists."
+        }
+    }
+
+    findBFS(data) {
+        const queue = [this.root];
+        let _node = null;
+
+        // Go thru every node in BFS
+        this.traverseBFS((node) => {
+            // Return match if found
+            if(node.data === data) {
+                _node = node;
+            }
+        })
+
+        return _node;
+    }
+
+    traverseBFS(cb) {
+        const queue = [this.root];
+
+        if(cb)
+            while(queue.length) {
+                // Store current node & remove it from queue
+                const node = queue.shift();
+
+                cb(node)
+
+                    // Push children of current node to end of queue
+                    for(const child of node.children) {
+                    queue.push(child);
+                }
+            }
+    }
+}
 
 //Updates the most recent block
 
@@ -55,85 +116,37 @@ let TORNContractAddresses = {'0.1ETH': address_01,
         })     
     }
 
-    //Timeout between loops (only necessary if using the free key)
-    async function addDelayInternalTx(i){
-        setTimeout(async function (){
-            let url = makeInternalTxURL(Object.values(TORNContractAddresses)[i])
-            console.log(await getRequestInternalTx(url, i));
-        }, i * 10000);
-    }
-
     //If one of the accounts in the tree has interacted with the TornadoCash contracts
-    async function interactedWithTORN() {
+    async function interactedWithTORN(){
+        let promiseArray=[];
 
-        for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
-            addDelayInternalTx(i);
-        }
+        
+            for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
+                promiseArray.push(new Promise((resolve, reject) => {
+                    setTimeout(async function (){//Timeout between loops (only necessary if using the free key)
+                    
+                        let url = makeInternalTxURL(Object.values(TORNContractAddresses)[i])
 
+                        let tree = new Tree();
+                        tree.add(Object.keys(TORNContractAddresses)[i])
+                    
+                        getRequestInternalTx(url, i).then((res) => {
+                            for(let j=0; j<res.length; j++){
+                                tree.add(res[j], Object.keys(TORNContractAddresses)[i]);
+                            }
+                        }).then(()=>{
+                            console.log(tree.findBFS(Object.keys(TORNContractAddresses)[i]))
+                            resolve()
+                        })
+                    }, i * 10000);
+                }))
+            }
+            return await Promise.all(promiseArray)
+        
     }
 
-//NORMAL TXs
-    //Establishes the url to fetch normal transactions from the account in question
-    //(depending on the API Key provided and the address in question)
-    function makeNormalTxURL(addressWanted) {
+    
 
-        return 'https://api.etherscan.io/api'
-        + '?module=account'
-        + '&action=txlist'
-        + '&address=' + addressWanted
-        + '&startblock=0'
-        + '&endblock=99999999'
-        + '&page=1'
-        + '&offset=10'
-        + '&sort=asc'
-        + '&apikey='+ API_KEY   
-    }
-
-    //Gets the requested promise
-    async function  getRequestNomralTx(url, i){
-        return new Promise((resolve, reject) => {
-            https.get(url, res => {
-                let data = '';
-                res.on('data', chunk => {
-                data += chunk;
-                });
-                res.on('end', async () => {
-                    let arr = [];
-                data = JSON.parse(data);
-                let count = 0;
-                for(let j=0; j<data.result.length; j++){ 
-                    if(data.result[i].input == '0x' && data.result[i].value != '0')
-                    arr[count]=data.result[i].to;
-                    count++;
-                }
-                resolve(arr)
-                })
-            }).on('error', err => {
-                console.log(err.message);
-            })
-        })     
-    }
-
-    //Timeout between loops (only necessary if using the free key)
-    async function addDelayNormalTx(i){
-        setTimeout(async function (){
-            let url = makeNormalTxURL(Object.values(TORNContractAddresses)[i])
-            console.log(await getRequestNomralTx(url, i));//If there are more than 1 instance of the same account, 
-                                                          //just sum the values instead of creating to children with the same name
-        }, i * 10000);
-    }
-
-    //Gets all addresses the acount has sent funds to, after receiving funds from a TCash contract
-    async function getAddressConnections() {
-
-        for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
-            addDelayNormalTx(i);
-            
-            //Create Tree or update tree
-            
-        }
-
-    }
 
 //If one of the accounts in the tree has interacted with the TornadoCash contracts
 
@@ -148,4 +161,9 @@ let TORNContractAddresses = {'0.1ETH': address_01,
 //Call Functions
 //getConnections('0xcFCB441dD850aF358eE7156907103B7A79475522');
 //tornado cash user https://etherscan.io/address/0x1e423f3eabb63a1d7033016cbd1398512d964207
-interactedWithTORN()
+
+
+//getAddressConnections()
+interactedWithTORN().then(()=>{
+    console.log('blh blah' + treeArr)
+})
