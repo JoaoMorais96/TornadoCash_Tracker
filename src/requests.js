@@ -15,102 +15,128 @@ let TORNContractAddresses = {'0.1ETH': address_01,
 
 //Updates the most recent block
 
-//Establishes the url to fetch normal transactions from the account in question
-//(depending on the API Key provided and the address in question)
-function makeNormalTxURL(addressWanted) {
 
-    return 'https://api.etherscan.io/api'
-    + '?module=account'
-    + '&action=txlist'
-    + '&address=' + addressWanted
-    + '&startblock=0'
-    + '&endblock=99999999'
-    + '&page=1'
-    + '&offset=10'
-    + '&sort=asc'
-    + '&apikey='+ API_KEY   
-}
+//INTERNAL TXs
+    //Establishes the url to fetch internal transactions (interactions with smart contracts) from the account in question
+    //(depending on the API Key provided and the address in question)
+    function makeInternalTxURL(addressWanted) {
 
-//Establishes the url to fetch internal transactions (interactions with smart contracts) from the account in question
-//(depending on the API Key provided and the address in question)
-function makeInternalTxURL(addressWanted) {
-
-    return 'https://api.etherscan.io/api'
-    + '?module=account'
-    + '&action=txlistinternal'
-    + '&address=' + addressWanted
-    + '&startblock=0'
-    + '&endblock=99999999'
-    + '&page=1'
-    + '&offset=10'
-    + '&sort=asc'
-    + '&apikey='+ API_KEY   
-}
-
-//Gets the requested promise
-async function  getRequestInternalTx(url, i){
-    return new Promise((resolve, reject) => {
-        https.get(url, res => {
-            let data = '';
-            res.on('data', chunk => {
-              data += chunk;
-            });
-            res.on('end', async () => {
-                let arr = [];
-              data = JSON.parse(data);
-              console.log(Object.keys(TORNContractAddresses)[i]+':')
-              for(let j=0; j<data.result.length; j++){ 
-                arr[j]= data.result[j].to;
-              }
-              resolve(arr)
+        return 'https://api.etherscan.io/api'
+        + '?module=account'
+        + '&action=txlistinternal'
+        + '&address=' + addressWanted
+        + '&startblock=0'
+        + '&endblock=99999999'
+        + '&page=1'
+        + '&offset=10'
+        + '&sort=asc'
+        + '&apikey='+ API_KEY   
+    }
+    //Gets the requested promise
+    async function  getRequestInternalTx(url, i){
+        return new Promise((resolve, reject) => {
+            https.get(url, res => {
+                let data = '';
+                res.on('data', chunk => {
+                data += chunk;
+                });
+                res.on('end', async () => {
+                    let arr = [];
+                data = JSON.parse(data);
+                console.log(Object.keys(TORNContractAddresses)[i]+':')
+                for(let j=0; j<data.result.length; j++){ 
+                    arr[j]= data.result[j].to;
+                }
+                resolve(arr)
+                })
+            }).on('error', err => {
+                console.log(err.message);
             })
-          }).on('error', err => {
-            console.log(err.message);
-          })
-    })     
-}
-
-//Timeout between loops (only necessary if using the free key)
-async function addDelayInternalTx(i){
-    setTimeout(async function (){
-        let url = makeInternalTxURL(Object.values(TORNContractAddresses)[i])
-        console.log(await getRequestInternalTx(url, i));
-    }, i * 10000);
-}
-
-//If one of the accounts in the tree has interacted with the TornadoCash contracts
-async function interactedWithTORN() {
-
-    for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
-        addDelayInternalTx(i);
+        })     
     }
 
-}
+    //Timeout between loops (only necessary if using the free key)
+    async function addDelayInternalTx(i){
+        setTimeout(async function (){
+            let url = makeInternalTxURL(Object.values(TORNContractAddresses)[i])
+            console.log(await getRequestInternalTx(url, i));
+        }, i * 10000);
+    }
 
-//Gets all addresses the acount has interected with (either sent or received funds from)
-function getConnections(addressWanted) {
+    //If one of the accounts in the tree has interacted with the TornadoCash contracts
+    async function interactedWithTORN() {
 
-    let url = makeNormalTxURL(addressWanted)
+        for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
+            addDelayInternalTx(i);
+        }
 
-    https.get(url, res => {
-        let data = '';
-        res.on('data', chunk => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          data = JSON.parse(data);
+    }
 
-          for(let i=0; i<data.result.length; i++){
-            //If the address is receiving funds, if there is no input in the tx (simple funds transfer)
-            //and if it wasn't a fake tx (value of the transfered should be greater than zero)
-            if(data.result[i].from != addressWanted && data.result[i].input == '0x' && data.result[i].value != '0')
-            console.log(data.result[i]);
-          }
-        })
-      }).on('error', err => {
-        console.log(err.message);
-      })
-}
+//NORMAL TXs
+    //Establishes the url to fetch normal transactions from the account in question
+    //(depending on the API Key provided and the address in question)
+    function makeNormalTxURL(addressWanted) {
+
+        return 'https://api.etherscan.io/api'
+        + '?module=account'
+        + '&action=txlist'
+        + '&address=' + addressWanted
+        + '&startblock=0'
+        + '&endblock=99999999'
+        + '&page=1'
+        + '&offset=10'
+        + '&sort=asc'
+        + '&apikey='+ API_KEY   
+    }
+
+    //Gets the requested promise
+    async function  getRequestNomralTx(url, i){
+        return new Promise((resolve, reject) => {
+            https.get(url, res => {
+                let data = '';
+                res.on('data', chunk => {
+                data += chunk;
+                });
+                res.on('end', async () => {
+                    let arr = [];
+                data = JSON.parse(data);
+                let count = 0;
+                for(let j=0; j<data.result.length; j++){ 
+                    if(data.result[i].input == '0x' && data.result[i].value != '0')
+                    arr[count]=data.result[i].to;
+                    count++;
+                }
+                resolve(arr)
+                })
+            }).on('error', err => {
+                console.log(err.message);
+            })
+        })     
+    }
+
+    //Timeout between loops (only necessary if using the free key)
+    async function addDelayNormalTx(i){
+        setTimeout(async function (){
+            let url = makeNormalTxURL(Object.values(TORNContractAddresses)[i])
+            console.log(await getRequestNomralTx(url, i));//If there are more than 1 instance of the same account, 
+                                                          //just sum the values instead of creating to children with the same name
+        }, i * 10000);
+    }
+
+    //Gets all addresses the acount has sent funds to, after receiving funds from a TCash contract
+    async function getAddressConnections() {
+
+        for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
+            addDelayNormalTx(i);
+            
+            //Create Tree or update tree
+            
+        }
+
+    }
+
+//If one of the accounts in the tree has interacted with the TornadoCash contracts
+
 
 //Creats a "from" tree (see image anexed "tree.png")
 
