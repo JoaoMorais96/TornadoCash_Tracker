@@ -118,40 +118,49 @@ class Tree {
 
     //If one of the accounts in the tree has interacted with the TornadoCash contracts
     async function interactedWithTORN(){
+
+        //Because promises are done in a loop, this is required if we want to wait for all of them tor esolve before moving on
         let promiseArray=[];
 
-        
+            //For each TORN pool
             for(let i =0; i< Object.keys(TORNContractAddresses).length; i++) {
+                //Create promise
                 promiseArray.push(new Promise((resolve, reject) => {
+
                     setTimeout(async function (){//Timeout between loops (only necessary if using the free key)
-                    
+                        //Creates the URL to be fetched in the API
                         let url = makeInternalTxURL(Object.values(TORNContractAddresses)[i])
 
+                        //Create a new tree for the current TORN pool
                         let tree = new Tree();
+                        //Add the name of the pool as the mother of the tree
                         tree.add(Object.keys(TORNContractAddresses)[i])
                     
-                        getRequestInternalTx(url, i).then((res) => {
+                        //Gets the API data
+                        getRequestInternalTx(url, i)
+                        //Adds each address as children of the tree
+                        .then((res) => {
                             for(let j=0; j<res.length; j++){
                                 tree.add(res[j], Object.keys(TORNContractAddresses)[i]);
                             }
+                            //Resolves the current promise
                         }).then(()=>{
-                            console.log(tree.findBFS(Object.keys(TORNContractAddresses)[i]))
-                            resolve()
+                            //console.log(tree.findBFS(Object.keys(TORNContractAddresses)[i]))
+                            resolve(tree)
                         })
-                    }, i * 10000);
+                    }, i * 1000);
                 }))
             }
-            return await Promise.all(promiseArray)
-        
+
+            return await Promise.all(promiseArray)  
     }
 
-    
 
+//Creats a "to" tree (see image anexed "tree.png")
+async function createChildren(childrenArr){
+    let initBranchSize = treeBranch.root.children.length;
 
-//If one of the accounts in the tree has interacted with the TornadoCash contracts
-
-
-//Creats a "from" tree (see image anexed "tree.png")
+}
 
 //Checks if any of the wallets in a tree have interacted with a contract linked to CoinJoin
 
@@ -164,6 +173,14 @@ class Tree {
 
 
 //getAddressConnections()
-interactedWithTORN().then(()=>{
-    console.log('blh blah' + treeArr)
+interactedWithTORN().then((res)=>{
+    //let finaltree=res[0].root.children;
+    let childrenArr = [];
+    //Creates an array with all the children addresses (for now just for the 0.1ETH pool children)
+    for(let i=0; i<res[0].root.children.length; i++){
+        childrenArr.push(JSON.stringify(res[0].root.children[i].data))
+    }
+    
+}).then((finaltree) =>{
+    let finaltree2 = createChildren(finaltree)
 })
